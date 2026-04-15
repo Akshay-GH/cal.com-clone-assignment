@@ -83,20 +83,6 @@ Optional email env vars:
 - Env var:
   - `NEXT_PUBLIC_API_BASE_URL=https://your-render-backend.onrender.com`
 
-## Migrate vs Seed (Simple)
-
-- `db:migrate` = create or update database structure (tables, columns, constraints)
-- `db:seed` = insert demo/sample data
-
-Think of it like this:
-
-- migrate = build the house
-- seed = add furniture
-
-For production:
-
-- Run `db:migrate` when schema changes
-- Run `db:seed` only if you want demo data in production
 
 ## Main Routes
 
