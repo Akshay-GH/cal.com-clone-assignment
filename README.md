@@ -24,7 +24,6 @@ Simple full-stack scheduling app built with Next.js, Express, and PostgreSQL.
 - `frontend` - Next.js app
 - `backend` - Express API, migrations, seed scripts
 
-## Run Locally (No Docker)
 
 ### 1. Prerequisites
 
