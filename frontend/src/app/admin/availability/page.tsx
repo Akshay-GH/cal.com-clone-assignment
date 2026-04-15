@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
@@ -70,7 +70,7 @@ function OverrideItemSkeleton() {
   );
 }
 
-export default function AvailabilityPage() {
+function AvailabilityPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromCreateEvent = searchParams.get("from") === "create-event";
@@ -472,5 +472,19 @@ export default function AvailabilityPage() {
         {saving ? "Saving..." : "Done"}
       </button>
     </section>
+  );
+}
+
+export default function AvailabilityPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="card p-5">
+          <p className="text-sm text-muted">Loading availability...</p>
+        </section>
+      }
+    >
+      <AvailabilityPageContent />
+    </Suspense>
   );
 }
