@@ -1,6 +1,6 @@
 # Scheduling Platform (Cal.com Clone)
 
-Live demo: [https://cal-com-clone-assignment-rho.vercel.app/](https://cal-com-clone-assignment-eight.vercel.app/)
+Live demo: [https://cal-com-clone-assignment-eight.vercel.app/](https://cal-com-clone-assignment-eight.vercel.app/)
 
 A full-stack scheduling application built with Next.js, Express, and PostgreSQL.
 
