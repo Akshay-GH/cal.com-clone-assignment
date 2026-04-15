@@ -1,7 +1,7 @@
 import express from "express";
 
 import { pool } from "../../db/pool";
-import { sendBookingNotification } from "../../services/notifications";
+import { dispatchBookingNotification } from "../../services/notifications";
 
 const router = express.Router();
 const DEFAULT_USER_ID = 1;
@@ -83,8 +83,8 @@ router.patch("/:id/cancel", async (req, res, next) => {
 
     const notify = notifyRes.rows[0];
     if (notify) {
-      try {
-        await sendBookingNotification({
+      dispatchBookingNotification(
+        {
           type: "cancelled",
           recipientEmail: notify.guest_email,
           recipientName: notify.guest_name,
@@ -92,10 +92,9 @@ router.patch("/:id/cancel", async (req, res, next) => {
           startAtIso: notify.start_at,
           endAtIso: notify.end_at,
           hostName: notify.host_name,
-        });
-      } catch (notificationError) {
-        console.error("Failed to send cancellation email", notificationError);
-      }
+        },
+        "booking-cancelled",
+      );
     }
 
     return res.json(result.rows[0]);

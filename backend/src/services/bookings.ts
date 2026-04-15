@@ -1,7 +1,7 @@
 import { addMinutes } from "date-fns";
 
 import { pool } from "../db/pool";
-import { sendBookingNotification } from "./notifications";
+import { dispatchBookingNotification } from "./notifications";
 
 type CreateBookingInput = {
   eventTypeId: number;
@@ -185,8 +185,8 @@ async function createBooking({
 
     const emailMeta = emailMetaRes.rows[0];
     if (emailMeta) {
-      try {
-        await sendBookingNotification({
+      dispatchBookingNotification(
+        {
           type: "confirmed",
           recipientEmail: inserted.guest_email,
           recipientName: inserted.guest_name,
@@ -194,13 +194,9 @@ async function createBooking({
           startAtIso: inserted.start_at,
           endAtIso: inserted.end_at,
           hostName: emailMeta.host_name,
-        });
-      } catch (notificationError) {
-        console.error(
-          "Failed to send booking confirmation email",
-          notificationError,
-        );
-      }
+        },
+        "booking-confirmed",
+      );
     }
 
     return inserted;
@@ -338,8 +334,8 @@ async function rescheduleBooking({
 
     const emailMeta = emailMetaRes.rows[0];
     if (emailMeta) {
-      try {
-        await sendBookingNotification({
+      dispatchBookingNotification(
+        {
           type: "rescheduled",
           recipientEmail: updated.guest_email,
           recipientName: updated.guest_name,
@@ -347,10 +343,9 @@ async function rescheduleBooking({
           startAtIso: updated.start_at,
           endAtIso: updated.end_at,
           hostName: emailMeta.host_name,
-        });
-      } catch (notificationError) {
-        console.error("Failed to send reschedule email", notificationError);
-      }
+        },
+        "booking-rescheduled",
+      );
     }
 
     return updated;

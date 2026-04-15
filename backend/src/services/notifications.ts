@@ -62,4 +62,46 @@ async function sendBookingNotification(input: BookingNotificationInput) {
   });
 }
 
-export { sendBookingNotification };
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function sendBookingNotificationWithRetry(
+  input: BookingNotificationInput,
+  maxAttempts = 3,
+) {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await sendBookingNotification(input);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        await sleep(attempt * 750);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+function dispatchBookingNotification(
+  input: BookingNotificationInput,
+  context: string,
+) {
+  setImmediate(() => {
+    void sendBookingNotificationWithRetry(input).catch((error) => {
+      console.error(`[notification:${context}] failed after retries`, error);
+    });
+  });
+}
+
+export {
+  dispatchBookingNotification,
+  sendBookingNotification,
+  sendBookingNotificationWithRetry,
+};
