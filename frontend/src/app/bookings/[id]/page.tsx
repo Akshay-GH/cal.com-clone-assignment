@@ -55,6 +55,7 @@ export default function BookingConfirmationPage({ params }: Props) {
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("09:00");
   const [rescheduling, setRescheduling] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     params.then((resolved) => setBookingId(resolved.id));
@@ -82,6 +83,12 @@ export default function BookingConfirmationPage({ params }: Props) {
     loadBooking(bookingId);
   }, [bookingId]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const selectedDateTime = useMemo(() => {
     if (!rescheduleDate || !rescheduleTime) return "";
 
@@ -102,7 +109,7 @@ export default function BookingConfirmationPage({ params }: Props) {
       });
       await loadBooking(bookingId);
       setError(null);
-      alert("Successfully rescheduled.");
+      setToast("Successfully rescheduled.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to reschedule booking");
     } finally {
@@ -187,6 +194,12 @@ export default function BookingConfirmationPage({ params }: Props) {
           Book another event
         </Link>
       </section>
+
+      {toast ? (
+        <div className="fixed bottom-4 left-4 right-4 z-[70] rounded-lg bg-black px-4 py-2 text-sm text-white shadow-lg sm:left-auto sm:right-4 sm:w-auto">
+          {toast}
+        </div>
+      ) : null}
     </main>
   );
 }

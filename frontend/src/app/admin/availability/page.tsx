@@ -43,6 +43,26 @@ const fallbackItems: AvailabilityItem[] = dayLabels.map((_, day) => ({
   isAvailable: day >= 1 && day <= 5,
 }));
 
+function normalizeAvailabilityItems(
+  sourceItems: AvailabilityItem[] | undefined,
+): AvailabilityItem[] {
+  const byDay = new Map(
+    (sourceItems || []).map((item) => [item.dayOfWeek, item]),
+  );
+
+  return fallbackItems.map((fallback) => {
+    const existing = byDay.get(fallback.dayOfWeek);
+    return existing
+      ? {
+          dayOfWeek: fallback.dayOfWeek,
+          startTime: existing.startTime,
+          endTime: existing.endTime,
+          isAvailable: existing.isAvailable,
+        }
+      : fallback;
+  });
+}
+
 function SchedulePillSkeleton() {
   return <div className="h-9 w-32 animate-pulse rounded-lg bg-slate-200" />;
 }
@@ -93,6 +113,13 @@ function AvailabilityPageContent() {
   const [openScheduleMenuId, setOpenScheduleMenuId] = useState<number | null>(
     null,
   );
+  const [toast, setToast] = useState<string | null>(null);
+  const [newScheduleName, setNewScheduleName] = useState("");
+  const [creatingSchedule, setCreatingSchedule] = useState(false);
+  const [creatingScheduleSubmitting, setCreatingScheduleSubmitting] =
+    useState(false);
+  const [deleteScheduleId, setDeleteScheduleId] = useState<number | null>(null);
+  const [deletingSchedule, setDeletingSchedule] = useState(false);
 
   async function loadAvailability(scheduleId?: number) {
     setLoading(true);
@@ -108,7 +135,7 @@ function AvailabilityPageContent() {
       setTimezone(res.timezone);
       setSchedules(res.schedules || []);
       setActiveScheduleId(res.activeScheduleId || null);
-      if (res.items.length > 0) setItems(res.items);
+      setItems(normalizeAvailabilityItems(res.items));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load availability");
@@ -138,22 +165,38 @@ function AvailabilityPageContent() {
     loadOverrides();
   }, []);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  function openCreateScheduleModal() {
+    setNewScheduleName(`Schedule ${schedules.length + 1}`);
+    setCreatingSchedule(true);
+  }
+
   async function createSchedule() {
-    const name = prompt("Schedule name", `Schedule ${schedules.length + 1}`);
-    if (!name) return;
+    if (!newScheduleName.trim() || creatingScheduleSubmitting) return;
+
+    setCreatingScheduleSubmitting(true);
 
     try {
       const created = await apiFetch<AvailabilitySchedule>(
         "/api/admin/availability/schedules",
         {
           method: "POST",
-          body: JSON.stringify({ name, timezone }),
+          body: JSON.stringify({ name: newScheduleName.trim(), timezone }),
         },
       );
       await loadAvailability(created.id);
       setShowScheduleList(false);
+      setCreatingSchedule(false);
+      setToast("Schedule created.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create schedule");
+    } finally {
+      setCreatingScheduleSubmitting(false);
     }
   }
 
@@ -175,20 +218,26 @@ function AvailabilityPageContent() {
   }
 
   async function deleteSchedule(scheduleId: number) {
-    const scheduleToDelete = schedules.find(
-      (schedule) => schedule.id === scheduleId,
-    );
-    const scheduleName = scheduleToDelete?.name || "this schedule";
-    if (!confirm(`Delete schedule \"${scheduleName}\"?`)) return;
+    setDeleteScheduleId(scheduleId);
+  }
+
+  async function confirmDeleteSchedule() {
+    if (!deleteScheduleId || deletingSchedule) return;
+
+    setDeletingSchedule(true);
 
     try {
-      await apiFetch(`/api/admin/availability/schedules/${scheduleId}`, {
+      await apiFetch(`/api/admin/availability/schedules/${deleteScheduleId}`, {
         method: "DELETE",
       });
       await loadAvailability();
       setOpenScheduleMenuId(null);
+      setDeleteScheduleId(null);
+      setToast("Schedule deleted.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete schedule");
+    } finally {
+      setDeletingSchedule(false);
     }
   }
 
@@ -215,7 +264,7 @@ function AvailabilityPageContent() {
 
   async function addOverride() {
     if (!overrideDate) {
-      setError("Select a date for override");
+      setToast("Select a date for override.");
       return;
     }
 
@@ -232,6 +281,8 @@ function AvailabilityPageContent() {
       });
       setOverrideDate("");
       await loadOverrides();
+      setError(null);
+      setToast("Override added.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save override");
     } finally {
@@ -252,6 +303,87 @@ function AvailabilityPageContent() {
 
   return (
     <section className="card p-5">
+      {creatingSchedule ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close create schedule dialog"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              if (!creatingScheduleSubmitting) setCreatingSchedule(false);
+            }}
+            disabled={creatingScheduleSubmitting}
+          />
+          <div className="card relative z-10 w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold">Create schedule</h3>
+            <div className="mt-3">
+              <label className="mb-2 block text-sm font-medium">
+                Schedule name
+              </label>
+              <input
+                className="input"
+                value={newScheduleName}
+                onChange={(e) => setNewScheduleName(e.target.value)}
+                placeholder="Weekday schedule"
+              />
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button
+                className="btn-secondary"
+                onClick={() => setCreatingSchedule(false)}
+                disabled={creatingScheduleSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={createSchedule}
+                disabled={!newScheduleName.trim() || creatingScheduleSubmitting}
+              >
+                {creatingScheduleSubmitting ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteScheduleId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close delete schedule dialog"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              if (!deletingSchedule) setDeleteScheduleId(null);
+            }}
+            disabled={deletingSchedule}
+          />
+          <div className="card relative z-10 w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold">Delete schedule?</h3>
+            <p className="mt-2 text-sm text-muted">
+              {schedules.find((s) => s.id === deleteScheduleId)?.name ||
+                "Selected schedule"}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                className="btn-secondary"
+                onClick={() => setDeleteScheduleId(null)}
+                disabled={deletingSchedule}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={confirmDeleteSchedule}
+                disabled={deletingSchedule}
+              >
+                {deletingSchedule ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <h2 className="text-lg font-semibold">Weekly availability</h2>
       <p className="mt-1 text-sm text-muted">
         Set your timezone and available hours by weekday.
@@ -270,7 +402,7 @@ function AvailabilityPageContent() {
             <p className="text-sm font-medium">Availability schedules</p>
             <button
               className="btn-secondary text-sm"
-              onClick={createSchedule}
+              onClick={openCreateScheduleModal}
               disabled={loading}
             >
               Add schedule
@@ -383,97 +515,93 @@ function AvailabilityPageContent() {
           <div className="mt-6 rounded-xl border border-border p-3">
             <div className="space-y-2">
               {loading
-                ? Array.from({ length: 5 }).map((_, index) => (
+                ? Array.from({ length: 7 }).map((_, index) => (
                     <AvailabilityRowSkeleton
                       key={`availability-skeleton-${index}`}
                     />
                   ))
-                : items
-                    .filter(
-                      (item) => item.dayOfWeek >= 1 && item.dayOfWeek <= 5,
-                    )
-                    .map((item) => (
-                      <div key={item.dayOfWeek} className="rounded-xl p-2">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                          <div className="flex items-center gap-3 sm:w-44 sm:flex-none">
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={item.isAvailable}
-                              aria-label={`Toggle ${dayLabels[item.dayOfWeek]} availability`}
-                              className={`relative h-7 w-12 rounded-full border transition ${
-                                item.isAvailable
-                                  ? "border-zinc-200 bg-zinc-100"
-                                  : "border-zinc-500 bg-zinc-800"
+                : items.map((item) => (
+                    <div key={item.dayOfWeek} className="rounded-xl p-2">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div className="flex items-center gap-3 sm:w-44 sm:flex-none">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={item.isAvailable}
+                            aria-label={`Toggle ${dayLabels[item.dayOfWeek]} availability`}
+                            className={`relative h-7 w-12 rounded-full border transition ${
+                              item.isAvailable
+                                ? "border-zinc-200 bg-zinc-100"
+                                : "border-zinc-500 bg-zinc-800"
+                            }`}
+                            onClick={() =>
+                              setItems((prev) =>
+                                prev.map((entry) =>
+                                  entry.dayOfWeek === item.dayOfWeek
+                                    ? {
+                                        ...entry,
+                                        isAvailable: !entry.isAvailable,
+                                      }
+                                    : entry,
+                                ),
+                              )
+                            }
+                          >
+                            <span
+                              className={`absolute top-0.5 h-5.5 w-5.5 rounded-full bg-black transition ${
+                                item.isAvailable ? "left-[25px]" : "left-0.5"
                               }`}
-                              onClick={() =>
-                                setItems((prev) =>
-                                  prev.map((entry) =>
-                                    entry.dayOfWeek === item.dayOfWeek
-                                      ? {
-                                          ...entry,
-                                          isAvailable: !entry.isAvailable,
-                                        }
-                                      : entry,
-                                  ),
-                                )
-                              }
-                            >
-                              <span
-                                className={`absolute top-0.5 h-5.5 w-5.5 rounded-full bg-black transition ${
-                                  item.isAvailable ? "left-[25px]" : "left-0.5"
-                                }`}
-                              />
-                            </button>
-                            <label className="text-sm font-medium leading-none sm:text-base">
-                              {dayLabels[item.dayOfWeek]}
-                            </label>
-                          </div>
+                            />
+                          </button>
+                          <label className="text-sm font-medium leading-none sm:text-base">
+                            {dayLabels[item.dayOfWeek]}
+                          </label>
+                        </div>
 
-                          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                            <input
-                              className="input min-w-0 flex-1"
-                              type="time"
-                              value={item.startTime}
-                              disabled={!item.isAvailable}
-                              onChange={(e) =>
-                                setItems((prev) =>
-                                  prev.map((entry) =>
-                                    entry.dayOfWeek === item.dayOfWeek
-                                      ? {
-                                          ...entry,
-                                          startTime: e.target.value,
-                                        }
-                                      : entry,
-                                  ),
-                                )
-                              }
-                            />
-                            <span className="hidden text-center text-sm text-muted sm:block">
-                              -
-                            </span>
-                            <input
-                              className="input min-w-0 flex-1"
-                              type="time"
-                              value={item.endTime}
-                              disabled={!item.isAvailable}
-                              onChange={(e) =>
-                                setItems((prev) =>
-                                  prev.map((entry) =>
-                                    entry.dayOfWeek === item.dayOfWeek
-                                      ? {
-                                          ...entry,
-                                          endTime: e.target.value,
-                                        }
-                                      : entry,
-                                  ),
-                                )
-                              }
-                            />
-                          </div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                          <input
+                            className="input min-w-0 flex-1"
+                            type="time"
+                            value={item.startTime}
+                            disabled={!item.isAvailable}
+                            onChange={(e) =>
+                              setItems((prev) =>
+                                prev.map((entry) =>
+                                  entry.dayOfWeek === item.dayOfWeek
+                                    ? {
+                                        ...entry,
+                                        startTime: e.target.value,
+                                      }
+                                    : entry,
+                                ),
+                              )
+                            }
+                          />
+                          <span className="hidden text-center text-sm text-muted sm:block">
+                            -
+                          </span>
+                          <input
+                            className="input min-w-0 flex-1"
+                            type="time"
+                            value={item.endTime}
+                            disabled={!item.isAvailable}
+                            onChange={(e) =>
+                              setItems((prev) =>
+                                prev.map((entry) =>
+                                  entry.dayOfWeek === item.dayOfWeek
+                                    ? {
+                                        ...entry,
+                                        endTime: e.target.value,
+                                      }
+                                    : entry,
+                                ),
+                              )
+                            }
+                          />
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  ))}
             </div>
           </div>
 
@@ -490,14 +618,27 @@ function AvailabilityPageContent() {
                 value={overrideDate}
                 onChange={(e) => setOverrideDate(e.target.value)}
               />
-              <label className="flex items-center gap-2 text-sm text-muted sm:col-span-1">
-                <input
-                  type="checkbox"
-                  checked={overrideBlocked}
-                  onChange={(e) => setOverrideBlocked(e.target.checked)}
-                />
+              <div className="flex items-center gap-2 text-sm text-muted sm:col-span-1">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={overrideBlocked}
+                  aria-label="Toggle block day"
+                  className={`relative h-7 w-12 rounded-full border transition ${
+                    overrideBlocked
+                      ? "border-zinc-500 bg-zinc-800"
+                      : "border-zinc-200 bg-zinc-100"
+                  }`}
+                  onClick={() => setOverrideBlocked((prev) => !prev)}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5.5 w-5.5 rounded-full bg-black transition ${
+                      overrideBlocked ? "left-[25px]" : "left-0.5"
+                    }`}
+                  />
+                </button>
                 Block day
-              </label>
+              </div>
               <input
                 className="input"
                 type="time"
@@ -563,6 +704,12 @@ function AvailabilityPageContent() {
           </button>
         </>
       )}
+
+      {toast ? (
+        <div className="fixed bottom-4 left-4 right-4 z-[70] rounded-lg bg-black px-4 py-2 text-sm text-white shadow-lg sm:left-auto sm:right-4 sm:w-auto">
+          {toast}
+        </div>
+      ) : null}
     </section>
   );
 }

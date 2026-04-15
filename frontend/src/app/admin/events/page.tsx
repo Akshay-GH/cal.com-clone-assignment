@@ -71,6 +71,13 @@ export default function EventsPage() {
   const [questionsByEvent, setQuestionsByEvent] = useState<
     Record<number, BookingQuestion[]>
   >({});
+  const [toast, setToast] = useState<string | null>(null);
+  const [deleteEventId, setDeleteEventId] = useState<number | null>(null);
+  const [deletingEvent, setDeletingEvent] = useState(false);
+  const [questionEventId, setQuestionEventId] = useState<number | null>(null);
+  const [newQuestionText, setNewQuestionText] = useState("");
+  const [newQuestionRequired, setNewQuestionRequired] = useState(false);
+  const [addingQuestion, setAddingQuestion] = useState(false);
 
   async function loadEvents() {
     setLoading(true);
@@ -90,6 +97,12 @@ export default function EventsPage() {
   useEffect(() => {
     loadEvents();
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const canSubmit = useMemo(() => {
     return form.title.trim().length > 0 && form.slug.trim().length > 2;
@@ -146,13 +159,24 @@ export default function EventsPage() {
   }
 
   async function deleteEvent(id: number) {
-    if (!confirm("Delete this event type?")) return;
+    setDeleteEventId(id);
+  }
 
+  async function confirmDeleteEvent() {
+    if (!deleteEventId || deletingEvent) return;
+
+    setDeletingEvent(true);
     try {
-      await apiFetch(`/api/admin/event-types/${id}`, { method: "DELETE" });
+      await apiFetch(`/api/admin/event-types/${deleteEventId}`, {
+        method: "DELETE",
+      });
       await loadEvents();
+      setToast("Event type deleted.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete event");
+    } finally {
+      setDeletingEvent(false);
+      setDeleteEventId(null);
     }
   }
 
@@ -163,6 +187,7 @@ export default function EventsPage() {
       await navigator.clipboard.writeText(bookingUrl);
       setCopiedId(item.id);
       setTimeout(() => setCopiedId(null), 1400);
+      setToast("Booking URL copied.");
     } catch {
       setError("Failed to copy URL");
     }
@@ -175,30 +200,39 @@ export default function EventsPage() {
       );
       setQuestionsByEvent((prev) => ({ ...prev, [eventTypeId]: res.data }));
       if (res.data.length === 0) {
-        alert("No questions mentioned.");
+        setToast("No questions mentioned.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load questions");
     }
   }
 
-  async function addQuestion(eventTypeId: number) {
-    const question = prompt("Question text");
-    if (!question) return;
-    const required = confirm("Should this question be required?");
+  function openAddQuestionModal(eventTypeId: number) {
+    setQuestionEventId(eventTypeId);
+    setNewQuestionText("");
+    setNewQuestionRequired(false);
+  }
 
+  async function submitAddQuestion() {
+    if (!questionEventId || !newQuestionText.trim()) return;
+
+    setAddingQuestion(true);
     try {
-      await apiFetch(`/api/admin/event-types/${eventTypeId}/questions`, {
+      await apiFetch(`/api/admin/event-types/${questionEventId}/questions`, {
         method: "POST",
         body: JSON.stringify({
-          question,
+          question: newQuestionText.trim(),
           inputType: "text",
-          isRequired: required,
+          isRequired: newQuestionRequired,
         }),
       });
-      await loadQuestions(eventTypeId);
+      await loadQuestions(questionEventId);
+      setQuestionEventId(null);
+      setToast("Question added.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add question");
+    } finally {
+      setAddingQuestion(false);
     }
   }
 
@@ -216,12 +250,99 @@ export default function EventsPage() {
 
   return (
     <section className="space-y-6">
+      {deleteEventId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close delete dialog"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              if (!deletingEvent) setDeleteEventId(null);
+            }}
+            disabled={deletingEvent}
+          />
+          <div className="card relative z-10 w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold">Delete event type?</h3>
+            <p className="mt-2 text-sm text-muted">
+              This action cannot be undone.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                className="btn-secondary"
+                onClick={() => setDeleteEventId(null)}
+                disabled={deletingEvent}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={confirmDeleteEvent}
+                disabled={deletingEvent}
+              >
+                {deletingEvent ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {questionEventId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close add question dialog"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setQuestionEventId(null)}
+          />
+          <div className="card relative z-10 w-full max-w-lg p-5">
+            <h3 className="text-lg font-semibold">Add booking question</h3>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-2 block text-sm font-medium">
+                  Question text
+                </label>
+                <input
+                  className="input"
+                  value={newQuestionText}
+                  onChange={(e) => setNewQuestionText(e.target.value)}
+                  placeholder="What should we prepare before the call?"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={newQuestionRequired}
+                  onChange={(e) => setNewQuestionRequired(e.target.checked)}
+                />
+                Mark as required
+              </label>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button
+                className="btn-secondary"
+                onClick={() => setQuestionEventId(null)}
+                disabled={addingQuestion}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={submitAddQuestion}
+                disabled={addingQuestion || !newQuestionText.trim()}
+              >
+                {addingQuestion ? "Adding..." : "Add question"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {isFormOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
             type="button"
             aria-label="Close dialog"
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={closeForm}
           />
 
@@ -366,7 +487,7 @@ export default function EventsPage() {
           </div>
           <button
             type="button"
-            className="rounded-xl border border-border bg-white px-4 py-2 font-semibold text-black"
+            className="btn-secondary text-sm"
             onClick={() => {
               setEditingId(null);
               setForm(initialForm);
@@ -405,7 +526,7 @@ export default function EventsPage() {
                   </button>
                   <button
                     className="btn-secondary flex-1 text-sm sm:flex-none"
-                    onClick={() => addQuestion(item.id)}
+                    onClick={() => openAddQuestionModal(item.id)}
                   >
                     Add Q
                   </button>
@@ -460,6 +581,12 @@ export default function EventsPage() {
           ) : null}
         </div>
       </div>
+
+      {toast ? (
+        <div className="fixed bottom-4 left-4 right-4 z-[70] rounded-lg bg-black px-4 py-2 text-sm text-white shadow-lg sm:left-auto sm:right-4 sm:w-auto">
+          {toast}
+        </div>
+      ) : null}
     </section>
   );
 }
