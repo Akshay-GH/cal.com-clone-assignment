@@ -1,65 +1,50 @@
 # Scheduling Platform (Cal.com Clone)
 
-A full-stack scheduling app built with Next.js, Express, and PostgreSQL.
+Simple full-stack scheduling app built with Next.js, Express, and PostgreSQL.
 
-## What this project includes
+## Features
 
-- Admin event management (create, edit, delete)
-- Weekly availability with multiple schedules
-- Date overrides for specific days
-- Public booking page with calendar-based slot selection
-- Booking confirmation and rescheduling
-- Upcoming and past bookings dashboard
-- Booking cancellation
-- Buffer time between meetings
-- Custom booking questions
-- Email notification support (SMTP)
-- Double-booking protection at service and database levels
+- Event type CRUD (admin)
+- Weekly availability + multiple schedules
+- Date overrides
+- Public booking page with calendar slot selection
+- Booking confirmation + reschedule
+- Admin bookings (upcoming/past) + cancel
+- Buffer time and custom booking questions
+- Double-booking protection
 
-## Tech stack
+## Tech Stack
 
-- Frontend: Next.js (App Router, TypeScript, Tailwind CSS)
+- Frontend: Next.js + TypeScript + Tailwind
 - Backend: Express + TypeScript
 - Database: PostgreSQL
-- Validation: Zod
 
-## Project structure
+## Project Structure
 
-- frontend: Next.js app
-- backend: Express API, services, migrations, seed
+- `frontend` - Next.js app
+- `backend` - Express API, migrations, seed scripts
 
-## Quick start (no Docker)
+## Run Locally (No Docker)
 
 ### 1. Prerequisites
 
 - Node.js 20+
-- PostgreSQL (local or cloud, for example Neon)
+- PostgreSQL (local or cloud, like Neon)
 
-### 2. Backend setup
-
-Run in PowerShell:
+### 2. Backend
 
 ```bash
 cd backend
 copy .env.example .env
 npm install
-```
-
-Set DATABASE_URL in backend/.env.
-
-Then run:
-
-```bash
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
-Backend runs at http://localhost:3001.
+Backend URL: `http://localhost:3001`
 
-### 3. Frontend setup
-
-Open a second terminal:
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -68,49 +53,60 @@ npm install
 npm run dev
 ```
 
-Frontend runs at http://localhost:3000.
+Frontend URL: `http://localhost:3000`
 
-## Main URLs
+## Deploy (Vercel + Render)
 
-- Home: http://localhost:3000
-- Admin events: http://localhost:3000/admin/events
-- Admin availability: http://localhost:3000/admin/availability
-- Admin bookings: http://localhost:3000/admin/bookings
-- Public profile (seeded user): http://localhost:3000/demo-user
+### Backend on Render
 
-## Environment notes
+- Root directory: `backend`
+- Build command: `npm install`
+- Start command: `npm run start`
+- Required env vars:
+  - `DATABASE_URL`
+  - `CORS_ORIGIN` (your Vercel production URL, no trailing slash)
 
-- backend/.env
-  - DATABASE_URL is required
-  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM are optional
-- frontend/.env.local
-  - NEXT_PUBLIC_API_BASE_URL should point to the backend (default http://localhost:3001)
+Optional email env vars:
 
-## Useful scripts
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
 
-Backend:
+### Frontend on Vercel
 
-- npm run dev
-- npm run db:migrate
-- npm run db:seed
-- npm run typecheck
+- Root directory: `frontend`
+- Build command: `npm run build`
+- Install command: `npm install`
+- Env var:
+  - `NEXT_PUBLIC_API_BASE_URL=https://your-render-backend.onrender.com`
 
-Frontend:
+## Migrate vs Seed (Simple)
 
-- npm run dev
-- npm run lint
+- `db:migrate` = create or update database structure (tables, columns, constraints)
+- `db:seed` = insert demo/sample data
 
-## Seed data
+Think of it like this:
 
-Seed script creates:
+- migrate = build the house
+- seed = add furniture
 
-- demo-user host
-- Sample event types
-- Sample availability
-- Sample upcoming/past bookings
+For production:
+
+- Run `db:migrate` when schema changes
+- Run `db:seed` only if you want demo data in production
+
+## Main Routes
+
+- Home: `/`
+- Admin events: `/admin/events`
+- Admin availability: `/admin/availability`
+- Admin bookings: `/admin/bookings`
+- Public host (seed): `/demo-user`
 
 ## Notes
 
-- The project uses a seeded default admin user for assignment scope.
-- Booking times are stored in UTC.
-- SMTP delivery depends on your network and email provider settings.
+- Time is stored in UTC
+- This project uses a seeded default user for assignment scope
