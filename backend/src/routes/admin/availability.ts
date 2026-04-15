@@ -227,6 +227,73 @@ router.patch("/schedules/:id/default", async (req, res, next) => {
   }
 });
 
+router.delete("/schedules/:id", async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const scheduleId = Number(req.params.id);
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
+      return res.status(400).json({ error: "Invalid schedule id" });
+    }
+
+    await client.query("BEGIN");
+
+    const targetRes = await client.query<{ isDefault: boolean }>(
+      `
+      SELECT is_default AS "isDefault"
+      FROM availability_schedules
+      WHERE id = $1 AND user_id = $2
+      `,
+      [scheduleId, DEFAULT_USER_ID],
+    );
+
+    if (targetRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+
+    const allSchedulesRes = await client.query<{ id: number }>(
+      `SELECT id FROM availability_schedules WHERE user_id = $1 ORDER BY id ASC`,
+      [DEFAULT_USER_ID],
+    );
+
+    if (allSchedulesRes.rows.length <= 1) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Cannot delete the only schedule" });
+    }
+
+    const isDeletingDefault = targetRes.rows[0].isDefault;
+
+    await client.query(
+      `DELETE FROM availability_schedules WHERE id = $1 AND user_id = $2`,
+      [scheduleId, DEFAULT_USER_ID],
+    );
+
+    if (isDeletingDefault) {
+      const nextDefault = allSchedulesRes.rows.find(
+        (item) => item.id !== scheduleId,
+      );
+      if (nextDefault) {
+        await client.query(
+          `
+          UPDATE availability_schedules
+          SET is_default = TRUE, updated_at = NOW()
+          WHERE id = $1 AND user_id = $2
+          `,
+          [nextDefault.id, DEFAULT_USER_ID],
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+    res.status(204).send();
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
 router.get("/overrides", async (_req, res, next) => {
   try {
     const result = await pool.query<{

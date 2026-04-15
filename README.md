@@ -1,106 +1,65 @@
 # Scheduling Platform (Cal.com Clone)
 
-Fullstack intern assignment implementation using Next.js + Express + PostgreSQL.
+A full-stack scheduling app built with Next.js, Express, and PostgreSQL.
 
-## Tech Stack
+## What this project includes
+
+- Admin event management (create, edit, delete)
+- Weekly availability with multiple schedules
+- Date overrides for specific days
+- Public booking page with calendar-based slot selection
+- Booking confirmation and rescheduling
+- Upcoming and past bookings dashboard
+- Booking cancellation
+- Buffer time between meetings
+- Custom booking questions
+- Email notification support (SMTP)
+- Double-booking protection at service and database levels
+
+## Tech stack
 
 - Frontend: Next.js (App Router, TypeScript, Tailwind CSS)
-- Backend: Node.js + Express
+- Backend: Express + TypeScript
 - Database: PostgreSQL
 - Validation: Zod
-- Time handling: date-fns + date-fns-tz
 
-## Monorepo Structure
+## Project structure
 
-- frontend: Next.js application (admin + public booking UI)
-- backend: Express API, migration scripts, seed scripts
+- frontend: Next.js app
+- backend: Express API, services, migrations, seed
 
-## Features Implemented
+## Quick start (no Docker)
 
-### 1) Event Types Management
-
-- Create event types with title, description, duration, and slug
-- Edit event types
-- Delete event types
-- List all event types in admin dashboard
-- Public booking links based on host slug + event slug
-
-### 2) Availability Settings
-
-- Configure weekly availability per day
-- Set start and end time per day
-- Set host timezone
-
-### 3) Public Booking Page
-
-- Public host page listing event types
-- Event booking page with date and slot selection
-- Booking form with name and email
-- Prevent double booking with overlap checks and DB exclusion constraint
-- Booking confirmation page
-
-### 4) Bookings Dashboard
-
-- Upcoming bookings view
-- Past bookings view
-- Cancel booking
-
-## Database Schema
-
-Core tables:
-
-- users
-- event_types
-- availabilities
-- date_overrides (schema-ready)
-- bookings
-
-Important constraints:
-
-- unique event slug per user: UNIQUE(user_id, slug)
-- overlap prevention for confirmed bookings using exclusion constraint on tstzrange
-
-## Local Setup
-
-### Prerequisites
+### 1. Prerequisites
 
 - Node.js 20+
-- PostgreSQL 14+
+- PostgreSQL (local or cloud, for example Neon)
 
-### 1. Start PostgreSQL
+### 2. Backend setup
 
-Create a local database and ensure PostgreSQL is running on `localhost:5432`.
-
-Recommended defaults used by this project:
-
-- Database: `cal_clone`
-- User: `postgres`
-- Password: `postgres`
-
-If you use a different user/password, update `DATABASE_URL` in [backend/.env](backend/.env).
-
-Example (PowerShell + psql):
-
-```bash
-psql -U postgres -h localhost -c "CREATE DATABASE cal_clone;"
-```
-
-### 2. Setup backend
+Run in PowerShell:
 
 ```bash
 cd backend
 copy .env.example .env
 npm install
+```
+
+Set DATABASE_URL in backend/.env.
+
+Then run:
+
+```bash
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
-Backend runs on http://localhost:3001
+Backend runs at http://localhost:3001.
 
-### 3. Setup frontend
+### 3. Frontend setup
 
-In a second terminal:
+Open a second terminal:
 
 ```bash
 cd frontend
@@ -109,56 +68,49 @@ npm install
 npm run dev
 ```
 
-Frontend runs on http://localhost:3000
+Frontend runs at http://localhost:3000.
 
-## Demo URLs
+## Main URLs
 
-- Landing: http://localhost:3000
+- Home: http://localhost:3000
 - Admin events: http://localhost:3000/admin/events
 - Admin availability: http://localhost:3000/admin/availability
 - Admin bookings: http://localhost:3000/admin/bookings
-- Public booking page: http://localhost:3000/demo-user
+- Public profile (seeded user): http://localhost:3000/demo-user
 
-## API Overview
+## Environment notes
 
-Admin endpoints:
+- backend/.env
+  - DATABASE_URL is required
+  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM are optional
+- frontend/.env.local
+  - NEXT_PUBLIC_API_BASE_URL should point to the backend (default http://localhost:3001)
 
-- GET /api/admin/event-types
-- POST /api/admin/event-types
-- PATCH /api/admin/event-types/:id
-- DELETE /api/admin/event-types/:id
-- GET /api/admin/availability
-- PUT /api/admin/availability
-- GET /api/admin/bookings?type=upcoming|past
-- PATCH /api/admin/bookings/:id/cancel
+## Useful scripts
 
-Public endpoints:
+Backend:
 
-- GET /api/public/:username
-- GET /api/public/:username/:eventSlug/slots?date=YYYY-MM-DD&timezone=IANA
-- POST /api/public/bookings
-- GET /api/public/bookings/:id
+- npm run dev
+- npm run db:migrate
+- npm run db:seed
+- npm run typecheck
 
-## Seed Data
+Frontend:
+
+- npm run dev
+- npm run lint
+
+## Seed data
 
 Seed script creates:
 
-- User: demo-user
-- Event types:
-  - intro-call (30 min)
-  - deep-dive (60 min)
-- Mon-Fri availability: 09:00 to 17:00
-- Example upcoming and past bookings
+- demo-user host
+- Sample event types
+- Sample availability
+- Sample upcoming/past bookings
 
-## Assumptions
+## Notes
 
-- No login flow is required by assignment, so admin routes use a default seeded user context.
-- Time is stored in UTC in bookings and rendered in local timezone on frontend.
-- Date overrides are included in schema but not exposed in UI in this first implementation pass.
-
-## What To Explain In Interview
-
-- Why UTC storage avoids timezone and DST drift
-- How overlap prevention is enforced at both service logic and DB constraint level
-- Why schema separates recurring weekly availability from booking instances
-- Tradeoff of default user context versus full auth for assignment scope
+- The project uses a seeded default admin user for assignment scope.
+- Booking times are stored in UTC.
+- SMTP delivery depends on your network and email provider settings.

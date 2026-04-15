@@ -21,6 +21,24 @@ type Booking = {
   hostName: string;
 };
 
+function BookingDetailsSkeleton() {
+  return (
+    <main className="mx-auto my-10 max-w-2xl px-4 sm:px-6">
+      <section className="card animate-pulse p-6 sm:p-8">
+        <div className="h-3 w-32 rounded bg-slate-200" />
+        <div className="mt-3 h-9 w-64 rounded bg-slate-200" />
+        <div className="mt-3 h-4 w-40 rounded bg-slate-200" />
+        <div className="mt-6 space-y-2">
+          <div className="h-4 w-full rounded bg-slate-200" />
+          <div className="h-4 w-4/5 rounded bg-slate-200" />
+          <div className="h-4 w-3/5 rounded bg-slate-200" />
+        </div>
+        <div className="mt-6 h-40 rounded-xl border border-border bg-slate-100" />
+      </section>
+    </main>
+  );
+}
+
 function toDateInputValue(date: Date) {
   return date.toISOString().slice(0, 10);
 }
@@ -91,11 +109,7 @@ export default function BookingConfirmationPage({ params }: Props) {
   }
 
   if (loading) {
-    return (
-      <main className="mx-auto mt-10 max-w-2xl rounded-2xl border border-border bg-surface p-6">
-        <p className="text-sm text-muted">Loading booking...</p>
-      </main>
-    );
+    return <BookingDetailsSkeleton />;
   }
 
   if (!booking) {

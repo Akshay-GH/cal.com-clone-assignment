@@ -43,6 +43,33 @@ const fallbackItems: AvailabilityItem[] = dayLabels.map((_, day) => ({
   isAvailable: day >= 1 && day <= 5,
 }));
 
+function SchedulePillSkeleton() {
+  return <div className="h-9 w-32 animate-pulse rounded-lg bg-slate-200" />;
+}
+
+function AvailabilityRowSkeleton() {
+  return (
+    <div className="animate-pulse rounded-xl border border-border p-3">
+      <div className="grid gap-3 sm:grid-cols-[120px,auto,1fr,24px,1fr] sm:items-center">
+        <div className="h-4 w-24 rounded bg-slate-200" />
+        <div className="h-4 w-16 rounded bg-slate-200" />
+        <div className="h-10 rounded bg-slate-200" />
+        <div className="hidden sm:block" />
+        <div className="h-10 rounded bg-slate-200" />
+      </div>
+    </div>
+  );
+}
+
+function OverrideItemSkeleton() {
+  return (
+    <div className="flex animate-pulse items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+      <div className="h-4 w-48 rounded bg-slate-200" />
+      <div className="h-8 w-20 rounded bg-slate-200" />
+    </div>
+  );
+}
+
 export default function AvailabilityPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -58,6 +85,8 @@ export default function AvailabilityPage() {
   const [overrideStartTime, setOverrideStartTime] = useState("09:00");
   const [overrideEndTime, setOverrideEndTime] = useState("17:00");
   const [loading, setLoading] = useState(true);
+  const [loadingOverrides, setLoadingOverrides] = useState(true);
+  const [addingOverride, setAddingOverride] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +114,7 @@ export default function AvailabilityPage() {
   }
 
   async function loadOverrides() {
+    setLoadingOverrides(true);
     try {
       const res = await apiFetch<{ data: DateOverride[] }>(
         "/api/admin/availability/overrides",
@@ -94,6 +124,8 @@ export default function AvailabilityPage() {
       setError(
         e instanceof Error ? e.message : "Failed to load date overrides",
       );
+    } finally {
+      setLoadingOverrides(false);
     }
   }
 
@@ -136,6 +168,23 @@ export default function AvailabilityPage() {
     }
   }
 
+  async function deleteSchedule(scheduleId: number) {
+    const scheduleToDelete = schedules.find(
+      (schedule) => schedule.id === scheduleId,
+    );
+    const scheduleName = scheduleToDelete?.name || "this schedule";
+    if (!confirm(`Delete schedule \"${scheduleName}\"?`)) return;
+
+    try {
+      await apiFetch(`/api/admin/availability/schedules/${scheduleId}`, {
+        method: "DELETE",
+      });
+      await loadAvailability();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete schedule");
+    }
+  }
+
   async function save() {
     if (!activeScheduleId) {
       setError("No active schedule selected");
@@ -163,6 +212,7 @@ export default function AvailabilityPage() {
       return;
     }
 
+    setAddingOverride(true);
     try {
       await apiFetch("/api/admin/availability/overrides", {
         method: "POST",
@@ -177,6 +227,8 @@ export default function AvailabilityPage() {
       await loadOverrides();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save override");
+    } finally {
+      setAddingOverride(false);
     }
   }
 
@@ -203,35 +255,57 @@ export default function AvailabilityPage() {
         </p>
       ) : null}
 
-      {loading ? <p className="mt-4 text-sm text-muted">Loading...</p> : null}
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 
       <div className="mt-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">Availability schedules</p>
-          <button className="btn-secondary text-sm" onClick={createSchedule}>
+          <button
+            className="btn-secondary text-sm"
+            onClick={createSchedule}
+            disabled={loading}
+          >
             Add schedule
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {schedules.map((schedule) => (
-            <button
-              key={schedule.id}
-              className={`btn-secondary text-sm ${activeScheduleId === schedule.id ? "border-primary bg-primary-soft" : ""}`}
-              onClick={() => loadAvailability(schedule.id)}
-            >
-              {schedule.name}
-              {schedule.isDefault ? " (Default)" : ""}
-            </button>
-          ))}
+          {loading
+            ? Array.from({ length: 3 }).map((_, index) => (
+                <SchedulePillSkeleton key={`schedule-skeleton-${index}`} />
+              ))
+            : schedules.map((schedule) => (
+                <button
+                  key={schedule.id}
+                  className={`btn-secondary text-sm ${
+                    activeScheduleId === schedule.id
+                      ? "border-green-300 bg-green-50 text-green-900 ring-1 ring-green-200"
+                      : ""
+                  }`}
+                  onClick={() => loadAvailability(schedule.id)}
+                  disabled={loading}
+                >
+                  {schedule.name}
+                  {schedule.isDefault ? " (Default)" : ""}
+                </button>
+              ))}
         </div>
         {activeScheduleId ? (
-          <button
-            className="btn-secondary mt-2 text-sm"
-            onClick={() => makeDefault(activeScheduleId)}
-          >
-            Make selected schedule default
-          </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              className="btn-secondary text-sm"
+              onClick={() => makeDefault(activeScheduleId)}
+              disabled={loading}
+            >
+              Make selected schedule default
+            </button>
+            <button
+              className="btn-secondary text-sm"
+              onClick={() => deleteSchedule(activeScheduleId)}
+              disabled={loading}
+            >
+              Delete selected schedule
+            </button>
+          </div>
         ) : null}
       </div>
 
@@ -242,66 +316,77 @@ export default function AvailabilityPage() {
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
           placeholder="UTC"
+          disabled={loading}
         />
       </div>
 
       <div className="mt-6 space-y-3">
-        {items.map((item, index) => (
-          <div
-            key={item.dayOfWeek}
-            className="rounded-xl border border-border p-3"
-          >
-            <div className="grid gap-3 sm:grid-cols-[120px,auto,1fr,24px,1fr] sm:items-center">
-              <label className="text-sm font-medium">
-                {dayLabels[item.dayOfWeek]}
-              </label>
-              <label className="flex items-center gap-2 text-sm text-muted">
-                <input
-                  type="checkbox"
-                  checked={item.isAvailable}
-                  onChange={(e) =>
-                    setItems((prev) => {
-                      const copy = [...prev];
-                      copy[index] = {
-                        ...copy[index],
-                        isAvailable: e.target.checked,
-                      };
-                      return copy;
-                    })
-                  }
-                />
-                Enabled
-              </label>
-              <input
-                className="input"
-                type="time"
-                value={item.startTime}
-                onChange={(e) =>
-                  setItems((prev) => {
-                    const copy = [...prev];
-                    copy[index] = { ...copy[index], startTime: e.target.value };
-                    return copy;
-                  })
-                }
-              />
-              <span className="hidden text-center text-sm text-muted sm:block">
-                to
-              </span>
-              <input
-                className="input"
-                type="time"
-                value={item.endTime}
-                onChange={(e) =>
-                  setItems((prev) => {
-                    const copy = [...prev];
-                    copy[index] = { ...copy[index], endTime: e.target.value };
-                    return copy;
-                  })
-                }
-              />
-            </div>
-          </div>
-        ))}
+        {loading
+          ? Array.from({ length: 7 }).map((_, index) => (
+              <AvailabilityRowSkeleton key={`availability-skeleton-${index}`} />
+            ))
+          : items.map((item, index) => (
+              <div
+                key={item.dayOfWeek}
+                className="rounded-xl border border-border p-3"
+              >
+                <div className="grid gap-3 sm:grid-cols-[120px,auto,1fr,24px,1fr] sm:items-center">
+                  <label className="text-sm font-medium">
+                    {dayLabels[item.dayOfWeek]}
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-muted">
+                    <input
+                      type="checkbox"
+                      checked={item.isAvailable}
+                      onChange={(e) =>
+                        setItems((prev) => {
+                          const copy = [...prev];
+                          copy[index] = {
+                            ...copy[index],
+                            isAvailable: e.target.checked,
+                          };
+                          return copy;
+                        })
+                      }
+                    />
+                    Enabled
+                  </label>
+                  <input
+                    className="input"
+                    type="time"
+                    value={item.startTime}
+                    onChange={(e) =>
+                      setItems((prev) => {
+                        const copy = [...prev];
+                        copy[index] = {
+                          ...copy[index],
+                          startTime: e.target.value,
+                        };
+                        return copy;
+                      })
+                    }
+                  />
+                  <span className="hidden text-center text-sm text-muted sm:block">
+                    to
+                  </span>
+                  <input
+                    className="input"
+                    type="time"
+                    value={item.endTime}
+                    onChange={(e) =>
+                      setItems((prev) => {
+                        const copy = [...prev];
+                        copy[index] = {
+                          ...copy[index],
+                          endTime: e.target.value,
+                        };
+                        return copy;
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            ))}
       </div>
 
       <div className="mt-8 rounded-xl border border-border p-4">
@@ -340,37 +425,50 @@ export default function AvailabilityPage() {
             disabled={overrideBlocked}
           />
         </div>
-        <button className="btn-secondary mt-3 text-sm" onClick={addOverride}>
-          Add override
+        <button
+          className="btn-secondary mt-3 text-sm"
+          onClick={addOverride}
+          disabled={addingOverride || loadingOverrides}
+        >
+          {addingOverride ? "Adding..." : "Add override"}
         </button>
 
         <div className="mt-4 space-y-2">
-          {overrides.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
-            >
-              <p className="text-sm text-muted">
-                {item.overrideDate} -{" "}
-                {item.isBlocked
-                  ? "Blocked"
-                  : `${item.startTime || "-"} to ${item.endTime || "-"}`}
-              </p>
-              <button
-                className="btn-secondary text-sm"
-                onClick={() => deleteOverride(item.id)}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-          {overrides.length === 0 ? (
+          {loadingOverrides
+            ? Array.from({ length: 3 }).map((_, index) => (
+                <OverrideItemSkeleton key={`override-skeleton-${index}`} />
+              ))
+            : overrides.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                >
+                  <p className="text-sm text-muted">
+                    {item.overrideDate} -{" "}
+                    {item.isBlocked
+                      ? "Blocked"
+                      : `${item.startTime || "-"} to ${item.endTime || "-"}`}
+                  </p>
+                  <button
+                    className="btn-secondary text-sm"
+                    onClick={() => deleteOverride(item.id)}
+                    disabled={loadingOverrides}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+          {!loadingOverrides && overrides.length === 0 ? (
             <p className="text-sm text-muted">No date overrides added yet.</p>
           ) : null}
         </div>
       </div>
 
-      <button className="btn-primary mt-5" onClick={save} disabled={saving}>
+      <button
+        className="btn-primary mt-5"
+        onClick={save}
+        disabled={saving || loading}
+      >
         {saving ? "Saving..." : "Done"}
       </button>
     </section>

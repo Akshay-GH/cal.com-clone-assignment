@@ -39,6 +39,25 @@ const initialForm: EventPayload = {
   slug: "",
 };
 
+function EventCardSkeleton() {
+  return (
+    <article className="animate-pulse rounded-xl border border-border p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-2">
+          <div className="h-4 w-36 rounded bg-slate-200" />
+          <div className="h-3 w-56 rounded bg-slate-200" />
+        </div>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <div className="h-8 w-20 rounded-lg bg-slate-200" />
+          <div className="h-8 w-20 rounded-lg bg-slate-200" />
+          <div className="h-8 w-20 rounded-lg bg-slate-200" />
+        </div>
+      </div>
+      <div className="mt-3 h-3 w-full rounded bg-slate-200" />
+    </article>
+  );
+}
+
 export default function EventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<EventType[]>([]);
@@ -274,8 +293,12 @@ export default function EventsPage() {
       <div className="card p-5">
         <h2 className="text-lg font-semibold">Event types</h2>
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-        {loading ? <p className="mt-4 text-sm text-muted">Loading...</p> : null}
         <div className="mt-4 space-y-3">
+          {loading
+            ? Array.from({ length: 3 }).map((_, index) => (
+                <EventCardSkeleton key={`event-skeleton-${index}`} />
+              ))
+            : null}
           {events.map((item) => (
             <article
               key={item.id}

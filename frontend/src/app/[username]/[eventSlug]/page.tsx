@@ -30,6 +30,21 @@ type Slot = {
   label: string;
 };
 
+function BookingHeaderSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="h-3 w-20 animate-pulse rounded bg-slate-200" />
+      <div className="h-8 w-52 animate-pulse rounded bg-slate-200" />
+      <div className="h-4 w-28 animate-pulse rounded bg-slate-200" />
+      <div className="h-4 w-full animate-pulse rounded bg-slate-200" />
+    </div>
+  );
+}
+
+function SlotSkeleton() {
+  return <div className="h-10 animate-pulse rounded-lg bg-slate-200" />;
+}
+
 function toDateKey(value: Date) {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, "0");
@@ -87,7 +102,8 @@ export default function EventBookingPage({ params }: Props) {
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loadingEvent, setLoadingEvent] = useState(true);
+  const [loadingSlots, setLoadingSlots] = useState(true);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,6 +117,7 @@ export default function EventBookingPage({ params }: Props) {
   useEffect(() => {
     async function loadEvent() {
       if (!username) return;
+      setLoadingEvent(true);
       try {
         const details = await apiFetch<{
           event: EventType;
@@ -110,6 +127,8 @@ export default function EventBookingPage({ params }: Props) {
         setQuestions(details.questions || []);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load event");
+      } finally {
+        setLoadingEvent(false);
       }
     }
 
@@ -119,7 +138,7 @@ export default function EventBookingPage({ params }: Props) {
   useEffect(() => {
     async function loadSlots() {
       if (!username || !eventSlug || !date) return;
-      setLoading(true);
+      setLoadingSlots(true);
       setSelectedSlot("");
       try {
         const res = await apiFetch<{ slots: Slot[] }>(
@@ -130,7 +149,7 @@ export default function EventBookingPage({ params }: Props) {
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load slots");
       } finally {
-        setLoading(false);
+        setLoadingSlots(false);
       }
     }
 
@@ -202,7 +221,7 @@ export default function EventBookingPage({ params }: Props) {
     }
   }
 
-  if (!eventType && !loading && !error) {
+  if (!eventType && !loadingEvent && !error) {
     return (
       <main className="mx-auto mt-10 max-w-3xl rounded-2xl border border-border bg-surface p-6">
         <h1 className="text-xl font-semibold">Event not found</h1>
@@ -222,15 +241,25 @@ export default function EventBookingPage({ params }: Props) {
               Home
             </Link>
           </div>
-          <h1 className="mt-2 text-2xl font-semibold">
-            {eventType?.title || "Loading..."}
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            {eventType?.durationMinutes || "-"} minutes
-          </p>
-          {eventType?.description ? (
-            <p className="mt-4 text-sm text-muted">{eventType.description}</p>
-          ) : null}
+          {loadingEvent ? (
+            <div className="mt-2">
+              <BookingHeaderSkeleton />
+            </div>
+          ) : (
+            <>
+              <h1 className="mt-2 text-2xl font-semibold">
+                {eventType?.title || "-"}
+              </h1>
+              <p className="mt-2 text-sm text-muted">
+                {eventType?.durationMinutes || "-"} minutes
+              </p>
+              {eventType?.description ? (
+                <p className="mt-4 text-sm text-muted">
+                  {eventType.description}
+                </p>
+              ) : null}
+            </>
+          )}
         </div>
 
         <div className="card p-5">
@@ -300,22 +329,23 @@ export default function EventBookingPage({ params }: Props) {
 
               <div className="mt-4 rounded-xl border border-border p-3">
                 <p className="text-sm font-medium">Available slots</p>
-                {loading ? (
-                  <p className="mt-2 text-sm text-muted">Loading slots...</p>
-                ) : null}
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  {slots.map((slot) => (
-                    <button
-                      key={slot.startAtUtc}
-                      type="button"
-                      className={`rounded-lg border px-3 py-2 text-sm ${selectedSlot === slot.startAtUtc ? "border-primary bg-primary-soft" : "border-border bg-surface"}`}
-                      onClick={() => setSelectedSlot(slot.startAtUtc)}
-                    >
-                      {slot.label}
-                    </button>
-                  ))}
+                  {loadingSlots
+                    ? Array.from({ length: 6 }).map((_, index) => (
+                        <SlotSkeleton key={`slot-skeleton-${index}`} />
+                      ))
+                    : slots.map((slot) => (
+                        <button
+                          key={slot.startAtUtc}
+                          type="button"
+                          className={`rounded-lg border px-3 py-2 text-sm ${selectedSlot === slot.startAtUtc ? "border-primary bg-primary-soft" : "border-border bg-surface"}`}
+                          onClick={() => setSelectedSlot(slot.startAtUtc)}
+                        >
+                          {slot.label}
+                        </button>
+                      ))}
                 </div>
-                {!loading && slots.length === 0 ? (
+                {!loadingSlots && slots.length === 0 ? (
                   <p className="mt-2 text-sm text-muted">No slots available.</p>
                 ) : null}
               </div>
