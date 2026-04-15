@@ -11,6 +11,17 @@
   --primary-soft: #dbeafe;
 }
 
+:root[data-theme="dark"] {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  --surface: #111113;
+  --surface-soft: #18181b;
+  --border: #27272a;
+  --muted: #a1a1aa;
+  --primary: #3b82f6;
+  --primary-soft: #1f2937;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -28,6 +39,22 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-ibm-plex-sans), sans-serif;
+}
+
+.theme-toggle {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.theme-toggle:hover {
+  background: var(--surface-soft);
 }
 
 .card {

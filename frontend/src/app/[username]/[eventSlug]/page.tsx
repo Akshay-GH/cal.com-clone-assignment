@@ -231,13 +231,13 @@ export default function EventBookingPage({ params }: Props) {
 
   return (
     <main className="mx-auto my-8 max-w-6xl px-4 sm:px-6">
-      <section className="grid gap-4 md:grid-cols-[320px,1fr]">
+      <section className="grid gap-4 lg:grid-cols-[320px,1fr]">
         <div className="card p-5">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
               Booking
             </p>
-            <Link href="/" className="btn-secondary text-sm">
+            <Link href="/admin/events" className="btn-secondary text-sm">
               Home
             </Link>
           </div>
@@ -329,7 +329,7 @@ export default function EventBookingPage({ params }: Props) {
 
               <div className="mt-4 rounded-xl border border-border p-3">
                 <p className="text-sm font-medium">Available slots</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {loadingSlots
                     ? Array.from({ length: 6 }).map((_, index) => (
                         <SlotSkeleton key={`slot-skeleton-${index}`} />

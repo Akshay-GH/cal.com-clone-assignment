@@ -62,6 +62,7 @@ export default function EventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<EventType[]>([]);
   const [form, setForm] = useState<EventPayload>(initialForm);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -117,6 +118,7 @@ export default function EventsPage() {
 
       setForm(initialForm);
       setEditingId(null);
+      setIsFormOpen(false);
       await loadEvents();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save event");
@@ -125,7 +127,14 @@ export default function EventsPage() {
     }
   }
 
+  function closeForm() {
+    setIsFormOpen(false);
+    setEditingId(null);
+    setForm(initialForm);
+  }
+
   function startEdit(item: EventType) {
+    setIsFormOpen(true);
     setEditingId(item.id);
     setForm({
       title: item.title,
@@ -165,6 +174,9 @@ export default function EventsPage() {
         `/api/admin/event-types/${eventTypeId}/questions`,
       );
       setQuestionsByEvent((prev) => ({ ...prev, [eventTypeId]: res.data }));
+      if (res.data.length === 0) {
+        alert("No questions mentioned.");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load questions");
     }
@@ -203,95 +215,167 @@ export default function EventsPage() {
   }
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[380px,1fr]">
-      <div className="card p-5">
-        <h2 className="text-lg font-semibold">
-          {editingId ? "Edit event type" : "Create event type"}
-        </h2>
-        <form className="mt-4 space-y-3" onSubmit={submitForm}>
-          <input
-            className="input"
-            placeholder="Title"
-            value={form.title}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, title: e.target.value }))
-            }
+    <section className="space-y-6">
+      {isFormOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close dialog"
+            className="absolute inset-0 bg-black/50"
+            onClick={closeForm}
           />
-          <input
-            className="input"
-            placeholder="Slug (intro-call)"
-            value={form.slug}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                slug: e.target.value
-                  .toLowerCase()
-                  .replace(/\s+/g, "-")
-                  .replace(/[^a-z0-9-]/g, ""),
-              }))
-            }
-          />
-          <input
-            className="input"
-            type="number"
-            min={15}
-            step={15}
-            value={form.durationMinutes}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                durationMinutes: Number(e.target.value),
-              }))
-            }
-          />
-          <input
-            className="input"
-            type="number"
-            min={0}
-            step={5}
-            placeholder="Buffer minutes"
-            value={form.bufferMinutes}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                bufferMinutes: Number(e.target.value),
-              }))
-            }
-          />
-          <textarea
-            className="input min-h-24"
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, description: e.target.value }))
-            }
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="btn-primary"
-              disabled={!canSubmit || saving}
-              type="submit"
-            >
-              {saving ? "Saving..." : editingId ? "Update" : "Create"}
-            </button>
-            {editingId ? (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setEditingId(null);
-                  setForm(initialForm);
-                }}
-              >
-                Cancel
-              </button>
-            ) : null}
+
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingId ? "Edit event type" : "Add a new event type"}
+            className="card relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto p-5"
+          >
+            <h2 className="text-2xl font-semibold">
+              {editingId ? "Edit event type" : "Add a new event type"}
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              Set up event types to offer different types of meetings.
+            </p>
+
+            <form className="mt-6 space-y-5" onSubmit={submitForm}>
+              <div>
+                <label className="mb-2 block text-sm font-medium">Title</label>
+                <input
+                  className="input"
+                  placeholder="Quick chat"
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">URL</label>
+                <div className="flex items-center rounded-xl border border-border bg-surface px-3">
+                  <span className="whitespace-nowrap text-sm text-muted">
+                    /demo-user/
+                  </span>
+                  <input
+                    className="h-11 w-full border-0 bg-transparent px-2 text-sm outline-none"
+                    placeholder="intro-call"
+                    value={form.slug}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        slug: e.target.value
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")
+                          .replace(/[^a-z0-9-]/g, ""),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">
+                  Description
+                </label>
+                <textarea
+                  className="input min-h-28"
+                  placeholder="A quick video meeting."
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">
+                  Duration
+                </label>
+                <div className="flex items-center rounded-xl border border-border bg-surface px-3">
+                  <input
+                    className="h-11 w-full border-0 bg-transparent text-sm outline-none"
+                    type="number"
+                    min={15}
+                    step={15}
+                    placeholder="15"
+                    value={form.durationMinutes}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        durationMinutes: Number(e.target.value),
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-muted">minutes</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Buffer</label>
+                <div className="flex items-center rounded-xl border border-border bg-surface px-3">
+                  <input
+                    className="h-11 w-full border-0 bg-transparent text-sm outline-none"
+                    type="number"
+                    min={0}
+                    step={5}
+                    placeholder="0"
+                    value={form.bufferMinutes}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        bufferMinutes: Number(e.target.value),
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-muted">minutes</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="btn-primary"
+                  disabled={!canSubmit || saving}
+                  type="submit"
+                >
+                  {saving ? "Saving..." : editingId ? "Update" : "Create"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={closeForm}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
-      </div>
+        </div>
+      ) : null}
 
       <div className="card p-5">
-        <h2 className="text-lg font-semibold">Event types</h2>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Event types</h2>
+            <p className="mt-1 text-sm text-muted">
+              Configure different events for people to book on your calendar.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-xl border border-border bg-white px-4 py-2 font-semibold text-black"
+            onClick={() => {
+              setEditingId(null);
+              setForm(initialForm);
+              setIsFormOpen(true);
+            }}
+          >
+            + New
+          </button>
+        </div>
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
         <div className="mt-4 space-y-3">
           {loading
@@ -314,31 +398,31 @@ export default function EventsPage() {
                 </div>
                 <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                   <button
-                    className="btn-secondary text-sm"
+                    className="btn-secondary flex-1 text-sm sm:flex-none"
                     onClick={() => loadQuestions(item.id)}
                   >
                     Questions
                   </button>
                   <button
-                    className="btn-secondary text-sm"
+                    className="btn-secondary flex-1 text-sm sm:flex-none"
                     onClick={() => addQuestion(item.id)}
                   >
                     Add Q
                   </button>
                   <button
-                    className="btn-secondary text-sm"
+                    className="btn-secondary flex-1 text-sm sm:flex-none"
                     onClick={() => copyEventUrl(item)}
                   >
                     {copiedId === item.id ? "Copied" : "Copy URL"}
                   </button>
                   <button
-                    className="btn-secondary text-sm"
+                    className="btn-secondary flex-1 text-sm sm:flex-none"
                     onClick={() => startEdit(item)}
                   >
                     Edit
                   </button>
                   <button
-                    className="btn-secondary text-sm"
+                    className="btn-secondary flex-1 text-sm sm:flex-none"
                     onClick={() => deleteEvent(item.id)}
                   >
                     Delete

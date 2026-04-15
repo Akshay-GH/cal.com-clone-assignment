@@ -18,7 +18,7 @@ export default function LoadingHostPage() {
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
             Public Booking
           </p>
-          <Link href="/" className="btn-secondary text-sm">
+          <Link href="/admin/events" className="btn-secondary text-sm">
             Home
           </Link>
         </div>

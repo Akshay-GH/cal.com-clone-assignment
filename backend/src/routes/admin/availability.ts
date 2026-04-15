@@ -184,6 +184,20 @@ router.post(
       res.status(201).json(createdSchedule);
     } catch (error) {
       await client.query("ROLLBACK");
+      const isDuplicateScheduleName =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: string }).code === "23505" &&
+        "constraint" in error &&
+        (error as { constraint?: string }).constraint ===
+          "availability_schedules_user_id_name_key";
+
+      if (isDuplicateScheduleName) {
+        return res
+          .status(409)
+          .json({ error: "A schedule with this name already exists." });
+      }
       next(error);
     } finally {
       client.release();

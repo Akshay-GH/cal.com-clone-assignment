@@ -101,6 +101,8 @@ export default function BookingConfirmationPage({ params }: Props) {
         body: JSON.stringify({ selectedDateTime }),
       });
       await loadBooking(bookingId);
+      setError(null);
+      alert("Successfully rescheduled.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to reschedule booking");
     } finally {
@@ -128,7 +130,7 @@ export default function BookingConfirmationPage({ params }: Props) {
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
             Booking confirmed
           </p>
-          <Link href="/" className="btn-secondary text-sm">
+          <Link href="/admin/events" className="btn-secondary text-sm">
             Home
           </Link>
         </div>

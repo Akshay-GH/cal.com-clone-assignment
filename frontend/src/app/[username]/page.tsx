@@ -39,11 +39,11 @@ export default async function HostPage({ params }: Params) {
   return (
     <main className="mx-auto my-8 max-w-4xl px-4 sm:px-6">
       <section className="card p-6 sm:p-8">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
             Public Booking
           </p>
-          <Link href="/" className="btn-secondary text-sm">
+          <Link href="/admin/events" className="btn-secondary text-sm">
             Home
           </Link>
         </div>
