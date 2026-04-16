@@ -2,44 +2,43 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen px-6 py-16">
-      <main className="mx-auto max-w-5xl rounded-3xl border border-border bg-surface p-8 shadow-sm sm:p-12">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,#1e293b_0%,#09090b_45%,#09090b_100%)] px-6 py-16">
+      <main className="mx-auto max-w-5xl rounded-3xl border border-border bg-surface/90 p-8 shadow-sm backdrop-blur sm:p-12">
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted">
           Cal Clone Assignment
         </p>
         <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
-          Scheduling platform with event types, availability, and booking flow
+          Stop emailing. Start scheduling.
         </h1>
-        <p className="mt-4 max-w-2xl text-muted">
-          This implementation replicates Cal.com style interactions for admin
-          management and public booking.
+        <p className="mt-4 max-w-3xl text-muted">
+          Share your availability, get booked in seconds, and never worry about
+          double-bookings again. Built for fast, hassle-free scheduling.
         </p>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 flex flex-wrap gap-2 text-sm text-muted">
+          <span className="rounded-full border border-border bg-surface-soft px-3 py-1">
+            Event Types
+          </span>
+          <span className="rounded-full border border-border bg-surface-soft px-3 py-1">
+            Availability
+          </span>
+          <span className="rounded-full border border-border bg-surface-soft px-3 py-1">
+            Date Overrides
+          </span>
+          <span className="rounded-full border border-border bg-surface-soft px-3 py-1">
+            Booking Flow
+          </span>
+        </div>
+
+        <div className="mt-10">
           <Link
             href="/admin/events"
-            className="card block p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
+            className="inline-flex items-center gap-3 rounded-2xl bg-zinc-800 px-6 py-3 text-lg font-semibold text-white transition hover:bg-zinc-700"
           >
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
-              Admin
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">Manage event types</h2>
-            <p className="mt-2 text-sm text-muted">
-              Create, update, and remove event types with custom durations.
-            </p>
-          </Link>
-
-          <Link
-            href="/demo-user"
-            className="card block p-5 transition hover:-translate-y-0.5 hover:shadow-sm"
-          >
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
-              Public
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">Open booking page</h2>
-            <p className="mt-2 text-sm text-muted">
-              Pick an event, choose a slot, and submit a booking request.
-            </p>
+            Go to app
+            <span aria-hidden className="text-xl leading-none">
+              ›
+            </span>
           </Link>
         </div>
       </main>

@@ -18,8 +18,8 @@ type EventType = {
 type EventPayload = {
   title: string;
   description: string;
-  durationMinutes: number;
-  bufferMinutes: number;
+  durationMinutes: string;
+  bufferMinutes: string;
   slug: string;
 };
 
@@ -34,8 +34,8 @@ type BookingQuestion = {
 const initialForm: EventPayload = {
   title: "",
   description: "",
-  durationMinutes: 30,
-  bufferMinutes: 0,
+  durationMinutes: "30",
+  bufferMinutes: "0",
   slug: "",
 };
 
@@ -105,24 +105,55 @@ export default function EventsPage() {
   }, [toast]);
 
   const canSubmit = useMemo(() => {
-    return form.title.trim().length > 0 && form.slug.trim().length > 2;
+    const duration = Number(form.durationMinutes);
+    const buffer = Number(form.bufferMinutes || "0");
+    const isDurationValid = Number.isFinite(duration) && duration >= 15;
+    const isBufferValid = Number.isFinite(buffer) && buffer >= 0;
+
+    return (
+      form.title.trim().length > 0 &&
+      form.slug.trim().length > 2 &&
+      isDurationValid &&
+      isBufferValid
+    );
   }, [form]);
 
   async function submitForm(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
 
+    const durationMinutes = Number(form.durationMinutes);
+    const bufferMinutes = Number(form.bufferMinutes || "0");
+
+    if (!Number.isFinite(durationMinutes) || durationMinutes < 15) {
+      setError("Duration must be 15 minutes or more.");
+      return;
+    }
+
+    if (!Number.isFinite(bufferMinutes) || bufferMinutes < 0) {
+      setError("Buffer must be 0 or more.");
+      return;
+    }
+
+    const payload = {
+      title: form.title,
+      description: form.description,
+      durationMinutes,
+      bufferMinutes,
+      slug: form.slug,
+    };
+
     setSaving(true);
     try {
       if (editingId) {
         await apiFetch(`/api/admin/event-types/${editingId}`, {
           method: "PATCH",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
       } else {
         await apiFetch("/api/admin/event-types", {
           method: "POST",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
 
         router.push("/admin/availability?from=create-event");
@@ -152,8 +183,8 @@ export default function EventsPage() {
     setForm({
       title: item.title,
       description: item.description || "",
-      durationMinutes: item.durationMinutes,
-      bufferMinutes: item.bufferMinutes || 0,
+      durationMinutes: String(item.durationMinutes),
+      bufferMinutes: String(item.bufferMinutes || 0),
       slug: item.slug,
     });
   }
@@ -427,9 +458,10 @@ export default function EventsPage() {
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,
-                        durationMinutes: Number(e.target.value),
+                        durationMinutes: e.target.value,
                       }))
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                   />
                   <span className="text-sm text-muted">minutes</span>
                 </div>
@@ -448,9 +480,10 @@ export default function EventsPage() {
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,
-                        bufferMinutes: Number(e.target.value),
+                        bufferMinutes: e.target.value,
                       }))
                     }
+                    onFocus={(e) => e.currentTarget.select()}
                   />
                   <span className="text-sm text-muted">minutes</span>
                 </div>
