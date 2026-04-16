@@ -18,7 +18,7 @@ const hasSmtpConfig =
   Boolean(process.env.SMTP_USER) &&
   Boolean(process.env.SMTP_PASS);
 
-const smtpPass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+const smtpPass = (process.env.SMTP_PASS || "").trim();
 
 const transporter = hasSmtpConfig
   ? nodemailer.createTransport({
